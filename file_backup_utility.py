@@ -59,7 +59,7 @@ print(file_list)
 
 ################# backup function #################
 def backup(path, file_list, file_list_input, backup_path_input, j):
-    # if file list consists of one element
+    # if file list consists of one element don't create a subfolder
     if len(file_list) == 1:
         backup_path = copy.deepcopy(backup_path_input)
     # if file list is all the content of wd (except for backup folder if it's inside wd)
