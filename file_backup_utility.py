@@ -24,7 +24,7 @@ def main():
             quit()
 
     #### CHECK THAT INPUT BACKUP DIRECTORY IS NOT INSIDE TARGET DIRECTORY ####
-    def check_backupdir_in_td(backup_path_input, backup_dir_name, target_dir):
+    def check_backup_dir_in_td(backup_path_input, backup_dir_name, target_dir):
         try:
             if backup_path_input == os.path.join(target_dir, backup_dir_name).replace('\\', '//'):
                 raise Exception
@@ -130,7 +130,7 @@ def main():
     backup_path_input = input("Enter full path to backup folder: ").replace('\\', '//')
     backup_dir_name = get_backup_dir_name(backup_path_input)
     check_path_validity(backup_path_input)
-    check_backupdir_in_td(backup_path_input, backup_dir_name, target_dir)
+    check_backup_dir_in_td(backup_path_input, backup_dir_name, target_dir)
 
     sleep_time = int(input("Enter frequency of backup (seconds): "))
     ######################
