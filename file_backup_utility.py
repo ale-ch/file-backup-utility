@@ -1,22 +1,20 @@
 # File backup utility.
 # To backup periodically, schedule script execution with preferred scheduler app.
 
-print('''
-#########################################
-########## FILE BACKUP UTILITY ##########
-#########################################
-''')
+import argparse, shutil, os, copy, logging, re
 
-import shutil, os, time, copy, logging, re
+##### LOGGER CONFIGURATION #####
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s:%(name)s:%(levelname)s:%(message)s')
 
 #### Check that input path is absolute####
-def check_path_validity(input_path):
+def check_path_abs(input_path):
     try:
         if not os.path.isabs(input_path):
             raise Exception
     except Exception:
         print('Invalid path input. Please specify absolute path.')
-        time.sleep(5)
         quit()
 
 #### Check that input backup directory is not inside target directory ####
@@ -27,7 +25,6 @@ def check_backup_dir_in_td(backup_path_input, target_dir):
             raise Exception
     except Exception:
         print('Backup directory cannot be inside td.')
-        time.sleep(5)
         quit()
 
 #### Check that all specified items exist in target directory ####
@@ -44,10 +41,9 @@ def check_item_in_td(target_dir, item_list):
             raise Exception
     except Exception:
         print('Item(s) {} not in target directory.'.format(bad_items))
-        time.sleep(5)
         quit()
 
-#### Count previous backups of the same file or folder ####
+#### Count previous backups of the same file or folder 
 #### inside specified backup directory ####
 def count_prev_backups(target_dir, backup_path_input, item_list):
     target_listdir = os.listdir(target_dir)
@@ -103,102 +99,108 @@ def make_item_list(target_dir, item_list_input):
 
     return item_list
 
+#### Create backup directory tree ####
+def make_backup_path(target_dir, item_list, backup_path_input, j):
+    backup_dir_name = os.path.split(backup_path_input)[1]
+    # if item list consists of one element don't create a subfolder
+    if len(item_list) == 1:
+        backup_path = copy.deepcopy(backup_path_input)
+    else:
+        target_dir_name = os.path.split(target_dir)[1]
+        # name backup subfolder as td_backup_j
+        backup_subdir = target_dir_name + '_backup_' + str(j)
+        # full path to j-th backup subfolder
+        backup_path = os.path.join(backup_path_input, backup_subdir)
+
+    # if the path to backup directory does not exist create the directory tree
+    if not os.path.exists(backup_path):
+        os.makedirs(backup_path)
+
+    return backup_path
+
+#### Backup items in item list to backup directory ####
+def backup(target_dir, backup_path, item_list, j):
+    # create empty lists
+    item_list_bu = [None] * len(item_list) # modified item names
+    dest_path = [None] * len(item_list) # i-th backup of item list
+
+    # iterate over all input item names
+    for i in range(len(item_list)):
+        # if i-th item is a folder use shutil.copytree()
+        if os.path.isdir(os.path.join(target_dir, item_list[i])):
+            if len(item_list) == 1:
+                item_list_bu[i] = item_list[i] + '_backup_' + str(j)
+            else:
+                item_list_bu[i] = item_list[i]
+            # destination path
+            dest_path[i] = os.path.join(backup_path, item_list_bu[i])
+            # copy item
+            shutil.copytree(item_list[i], dest_path[i])
+        # otherwise use shutil.copy()
+        else:
+            if len(item_list) == 1:
+                # modify itemname.extension to itemname_j.extension
+                item_list_bu[i] = os.path.splitext(item_list[i])[0] \
+                            + '_backup_' + str(j) + os.path.splitext(item_list[i])[1]
+            else:
+                item_list_bu[i] = item_list[i]
+
+            # destination path
+            dest_path[i] = os.path.join(backup_path, item_list_bu[i])
+            # copy item
+            shutil.copy(item_list[i], dest_path[i])
+
+        logger.debug('item backed up to: {}'.format(dest_path[i]))
+    logger.debug('Number of backed up items: {}'.format(len(item_list)))
+######################
 
 def main():
-    #### Create backup directory tree ####
-    def make_backup_path(target_dir, item_list, backup_path_input, j):
-        backup_dir_name = os.path.split(backup_path_input)[1]
-        # if item list consists of one element don't create a subfolder
-        if len(item_list) == 1:
-            backup_path = copy.deepcopy(backup_path_input)
-        else:
-            target_dir_name = os.path.split(target_dir)[1]
-            # name backup subfolder as td_backup_j
-            backup_subdir = target_dir_name + '_backup_' + str(j)
-            # full path to j-th backup subfolder
-            backup_path = os.path.join(backup_path_input, backup_subdir)
-
-        # if the path to backup directory does not exist create the directory tree
-        if not os.path.exists(backup_path):
-            os.makedirs(backup_path)
-
-        return backup_path
-
-    #### Backup items in item list to backup directory ####
-    def backup(target_dir, backup_path, item_list, j):
-        # create empty lists
-        item_list_bu = [None] * len(item_list) # modified item names
-        dest_path = [None] * len(item_list) # i-th backup of item list
-
-        # iterate over all input item names
-        for i in range(len(item_list)):
-            # if i-th item is a folder use shutil.copytree()
-            if os.path.isdir(os.path.join(target_dir, item_list[i])):
-                if len(item_list) == 1:
-                    item_list_bu[i] = item_list[i] + '_backup_' + str(j)
-                else:
-                    item_list_bu[i] = item_list[i]
-                # destination path
-                dest_path[i] = os.path.join(backup_path, item_list_bu[i])
-                # copy item
-                shutil.copytree(item_list[i], dest_path[i])
-            # otherwise use shutil.copy()
-            else:
-                if len(item_list) == 1:
-                    # modify itemname.extension to itemname_j.extension
-                    item_list_bu[i] = os.path.splitext(item_list[i])[0] \
-                                + '_backup_' + str(j) + os.path.splitext(item_list[i])[1]
-                else:
-                    item_list_bu[i] = item_list[i]
-
-                # destination path
-                dest_path[i] = os.path.join(backup_path, item_list_bu[i])
-                # copy item
-                shutil.copy(item_list[i], dest_path[i])
-
-            logger.debug('item backed up to: {}'.format(dest_path[i]))
-        logger.debug('Number of backed up items: {}'.format(len(item_list)))
-    ######################
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-target_dir', type = str, help = "Directory containing the files to backup. Needs to be an absolute path.")
+    parser.add_argument('-backup_dir', type = str, help = "Directory where files are backed up. Needs to be an absolute path.")
+    parser.add_argument('-item_list', type = str, help = "List of files to backup. Input as <itemname.extension>, separated by a '|'.\
+                                All items need to exist within target directory. Leave empty to backup all items in td")
+    
+    args = parser.parse_args()
 
     #### INPUTS ####
-    target_dir = input('Enter full path to target directory (td): ')
-    check_path_validity(target_dir)
+    target_dir = args.target_dir
+    check_path_abs(target_dir)
     print('Content of td:')
     print(os.listdir(target_dir))
 
-    item_list_input = input("Enter item name(s) as <itemname.extension> (separated by a '|').\
-    Items need to exist within td. Leave empty to backup all items in td: ")
+    backup_path_input = args.backup_dir
+    check_path_abs(backup_path_input)
+    check_backup_dir_in_td(backup_path_input, target_dir)
+
+    item_list_input = args.item_list
     item_list = make_item_list(target_dir, item_list_input)
     check_item_in_td(target_dir, item_list)
+    #################
 
-    backup_path_input = input("Enter full path to backup folder: ")
-    check_path_validity(backup_path_input)
-    check_backup_dir_in_td(backup_path_input, target_dir)
-    ######################
+    # Index for current backup
+    if os.path.exists(backup_path_input):
+        backup_count = count_prev_backups(target_dir, backup_path_input, item_list)
+        if backup_count == 0: j = 1
+        else: j = backup_count + 1
+    else: j = 1
+        
+    # Create path to backup directory
+    backup_path = make_backup_path(target_dir, item_list, backup_path_input, j)
 
-    ##### LOGGER CONFIGURATION #####
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.DEBUG)
-
-    formatter = logging.Formatter('%(asctime)s:%(name)s:%(levelname)s:%(message)s')
-
+    ##### LOGGER FILE HANDLER #####
     file_handler = logging.FileHandler(backup_path_input + '//backup_log.log')
     file_handler.setFormatter(formatter)
 
     logger.addHandler(file_handler)
     ######################################
 
+    # Log info
     logger.debug('Path to main backup directory: {}'.format(backup_path_input))
     logger.debug('List of items to backup: {}'.format(item_list))
 
-    # Index for current backup
-    backup_count = count_prev_backups(target_dir, backup_path_input, item_list)
-    if backup_count == 0: j = 1
-    else: j = backup_count + 1
-
-    backup_path = make_backup_path(target_dir, item_list, backup_path_input, j)
+    # Execute the backup
     backup(target_dir, backup_path, item_list, j)
-
 
 if __name__ == '__main__':
     main()
