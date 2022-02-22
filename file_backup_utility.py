@@ -23,7 +23,7 @@ def check_path_validity(input_path):
 def check_backup_dir_in_td(backup_path_input, target_dir):
     backup_dir_name = os.path.split(backup_path_input)[1]
     try:
-        if backup_path_input == os.path.join(target_dir, backup_dir_name).replace('\\', '//'):
+        if backup_path_input == os.path.join(target_dir, backup_dir_name):
             raise Exception
     except Exception:
         print('Backup directory cannot be inside td.')
@@ -50,7 +50,6 @@ def check_item_in_td(target_dir, item_list):
 #### Count previous backups of the same file or folder ####
 #### inside specified backup directory ####
 def count_prev_backups(target_dir, backup_path_input, item_list):
-
     target_listdir = os.listdir(target_dir)
     target_dir_name = os.path.split(target_dir)[1]
 
@@ -71,7 +70,6 @@ def count_prev_backups(target_dir, backup_path_input, item_list):
 
 
     regex_match = [None] * len(backup_listdir)
-    backup_count = 0
     # look for previous backups of the target item inside of backup directory
     for i in range(len(backup_listdir)):
         # if target item is a folder check for pattern target_item(regex)
@@ -82,11 +80,13 @@ def count_prev_backups(target_dir, backup_path_input, item_list):
             regex_match[i] = re.search(target_item[0] + '_backup_\d+' + target_item[1],\
                             backup_listdir[i])
 
+        # if a match is found, get backup number from regex pattern
         if regex_match[i] != None:
             regex_match[i] = regex_match[i].group()
             backup_count = int(re.search('\d+', regex_match[i]).group())
+        # otherwise backup count is zero
         else:
-            backup_count = backup_count
+            backup_count = 0
 
     return backup_count
 
@@ -116,7 +116,7 @@ def main():
             # name backup subfolder as td_backup_j
             backup_subdir = target_dir_name + '_backup_' + str(j)
             # full path to j-th backup subfolder
-            backup_path = os.path.join(backup_path_input, backup_subdir).replace('\\', '//')
+            backup_path = os.path.join(backup_path_input, backup_subdir)
 
         # if the path to backup directory does not exist create the directory tree
         if not os.path.exists(backup_path):
@@ -133,13 +133,13 @@ def main():
         # iterate over all input item names
         for i in range(len(item_list)):
             # if i-th item is a folder use shutil.copytree()
-            if os.path.isdir(os.path.join(target_dir, item_list[i]).replace('\\', '//')):
+            if os.path.isdir(os.path.join(target_dir, item_list[i])):
                 if len(item_list) == 1:
                     item_list_bu[i] = item_list[i] + '_backup_' + str(j)
                 else:
                     item_list_bu[i] = item_list[i]
                 # destination path
-                dest_path[i] = os.path.join(backup_path, item_list_bu[i]).replace('\\', '//')
+                dest_path[i] = os.path.join(backup_path, item_list_bu[i])
                 # copy item
                 shutil.copytree(item_list[i], dest_path[i])
             # otherwise use shutil.copy()
@@ -152,7 +152,7 @@ def main():
                     item_list_bu[i] = item_list[i]
 
                 # destination path
-                dest_path[i] = os.path.join(backup_path, item_list_bu[i]).replace('\\', '//')
+                dest_path[i] = os.path.join(backup_path, item_list_bu[i])
                 # copy item
                 shutil.copy(item_list[i], dest_path[i])
 
@@ -161,7 +161,7 @@ def main():
     ######################
 
     #### INPUTS ####
-    target_dir = input('Enter full path to target directory (td): ').replace('\\', '//')
+    target_dir = input('Enter full path to target directory (td): ')
     check_path_validity(target_dir)
     print('Content of td:')
     print(os.listdir(target_dir))
@@ -171,7 +171,7 @@ def main():
     item_list = make_item_list(target_dir, item_list_input)
     check_item_in_td(target_dir, item_list)
 
-    backup_path_input = input("Enter full path to backup folder: ").replace('\\', '//')
+    backup_path_input = input("Enter full path to backup folder: ")
     check_path_validity(backup_path_input)
     check_backup_dir_in_td(backup_path_input, target_dir)
     ######################
