@@ -1,9 +1,10 @@
-import os
-import argparse
-import shutil
-import re
-import logging
 from pathlib import Path
+
+import argparse
+import logging
+import os
+import re
+import shutil
 
 ##### LOGGER CONFIGURATION #####
 logger = logging.getLogger(__name__)
@@ -23,6 +24,7 @@ def check_backup_dir_in_td(backup_path_input, target_dir):
         print('Backup directory cannot be inside td.')
         quit()
 
+#### Check that target directory is nonemtpy ####
 def check_td_empty(target_dir):
     if len(os.listdir(target_dir)) == 0:
         print('Target directory is empty.')
